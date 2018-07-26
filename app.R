@@ -1,8 +1,8 @@
 ## app.R ##
 Rlib="/data/boehm/group/shiny_apps/Rlibs3.4.0"
-require(shiny,lib.loc=Rlib)
-require(shinydashboard,lib.loc=Rlib)
-require(rhandsontable,lib.loc=Rlib)
+library(shiny,lib.loc=Rlib)
+library(shinydashboard,lib.loc=Rlib)
+library(rhandsontable,lib.loc=Rlib)
 
 options(shiny.maxRequestSize=5000*1024^2)
 
