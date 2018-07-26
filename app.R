@@ -1,5 +1,5 @@
 ## app.R ##
-Rlib="/data/manke/repository/scripts/DNA_methylation/Rlibs.3.3.1"
+Rlib="/data/boehm/group/shiny_apps/Rlibs3.4.0"
 require(shiny,lib.loc=Rlib)
 require(shinydashboard,lib.loc=Rlib)
 require(rhandsontable,lib.loc=Rlib)
@@ -12,9 +12,9 @@ ui <- function(request) {dashboardPage(
     dashboardSidebar(
 
         textInput(inputId="group", label="Group", value = "", width = NULL, placeholder = NULL),
-        textInput(inputId="projectid", label="ProjectID", value = "", width = NULL, placeholder = NULL),
+        selectInput(inputId="projectid", label="ProjectID", choices=c("SELECT A PROJECT","Trancoso512A_B_C")),
         actionButton("submitinput", "Retrieve dataset"),
-        textInput(inputId="geneid", label="GeneID", value=""),
+        textInput(inputId="geneid", label="GeneID", value="",placeholder="TYPE IN GENE ID"),
         actionButton("selectgenes", "Select genes"),
         textOutput("fileDescription"),
         bookmarkButton()
@@ -39,10 +39,10 @@ server <- function(input, output, session) {
 
 ################################
     #require(rio,lib.loc=Rlib)
-    require(permute,lib.loc=Rlib)
+    library(RaceID,lib.loc=Rlib)
     #require(scater,lib.loc=Rlib)
-    require(ggplot2,lib.loc=Rlib)
-    source("/data/manke/repository/scripts/RaceID3_StemID2/RaceID3_StemID2-master/RaceID3_StemID2_class_KS.R")
+    library(ggplot2,lib.loc=Rlib)
+    
 
     output$sessionInfo <- renderPrint({capture.output(sessionInfo())})
 
@@ -69,19 +69,20 @@ server <- function(input, output, session) {
            sc <- myEnv[[sctmp]]
             }
         #render the head
-        output$datHead<-renderTable({sc@ndata[1:10,1:min(8,ncol(sc@ndata))]},caption="Normalized data",caption.placement = getOption("xtable.caption.placement", "top"),include.rownames=TRUE)
+        ndata<-as.data.frame(as.matrix(sc@ndata)*5000,stringsAsFactors=FALSE)
+        output$datHead<-renderTable({ndata[1:10,1:min(8,ncol(ndata))]},caption="Normalized data",caption.placement = getOption("xtable.caption.placement", "top"),include.rownames=TRUE)
 
         observeEvent(input$selectgenes, {
             inGenesL<-isolate(input$geneid)
             inGenes<-unlist(strsplit(inGenesL,split=";"))
             output$ingenes<-renderText(inGenes)
-            nv<-inGenes[inGenes %in% rownames(sc@ndata)]
+            nv<-inGenes[inGenes %in% rownames(ndata)]
             if(length(nv)>0){
                 ifelse(length(nv)==1,nt<-nv,nt<-"Selected genes")
-            output$tsneAgg<-renderPlot({plotexptsne(sc,nv,n=nt,logsc=as.logical(input$tsnelog))})
+            output$tsneAgg<-renderPlot({plotexpmap(sc,nv,n=nt,logsc=as.logical(input$tsnelog))})
             }#fi
             ###produce top correlated genes for aggregated selected gene(s)
-            cor.log2<-cor(x=log2(colSums(sc@ndata[rownames(sc@ndata) %in% inGenes,])+0.1),y=t(log2(sc@ndata+0.1))) 
+            cor.log2<-cor(x=log2(colSums(ndata[rownames(ndata) %in% inGenes,])+0.1),y=t(log2(ndata+0.1))) 
             output$corlog2<-renderPlot({boxplot(t(cor.log2))})
             cor.log2T<-as.data.frame(t(cor.log2),stringsAsFactors=FALSE)
             colnames(cor.log2T)<-"cor"
@@ -99,7 +100,7 @@ server <- function(input, output, session) {
             inpwselYL<-isolate(input$pwselY)}
             inpwselX<-unlist(strsplit(inpwselXL,split=";"))
             inpwselY<-unlist(strsplit(inpwselYL,split=";"))
-            plotdat<-as.data.frame(cbind(colSums(sc@ndata[rownames(sc@ndata) %in% inpwselX,]),colSums(sc@ndata[rownames(sc@ndata) %in% inpwselY,])),stringsAsFactors=FALSE)
+            plotdat<-as.data.frame(cbind(colSums(ndata[rownames(ndata) %in% inpwselX,]),colSums(ndata[rownames(ndata) %in% inpwselY,])),stringsAsFactors=FALSE)
             colnames(plotdat)<-c("X","Y")
             output$pwplot<-renderPlot({ggplot(data=plotdat)+geom_point(aes(x=X,y=Y))})
 
