@@ -3,8 +3,9 @@ Rlib="/data/boehm/group/shiny_apps/Rlibs3.4.0"
 library(shiny,lib.loc=Rlib)
 library(shinydashboard,lib.loc=Rlib)
 library(rhandsontable,lib.loc=Rlib)
+library(DT,lib.loc=Rlib)
 
-options(shiny.maxRequestSize=5000*1024^2)
+#options(shiny.maxRequestSize=5000*1024^2)
 
 ui <- function(request) {dashboardPage(
     dashboardHeader(title = "Dataset selection"),
@@ -71,6 +72,20 @@ server <- function(input, output, session) {
         #render the head
         ndata<-as.data.frame(as.matrix(sc@ndata)*5000,stringsAsFactors=FALSE)
         output$datHead<-renderTable({ndata[1:10,1:min(8,ncol(ndata))]},caption="Normalized data",caption.placement = getOption("xtable.caption.placement", "top"),include.rownames=TRUE)
+        load("/data/boehm/sikora/trancoso/512/180723ALL.Lp.Trinity.good.OLD.NEW.cVLR_CDA1x2.RaceID3NEW.NOrBE.CGenes.RPLS.FGenes.cellCycle.workspaceR/WGCNA.p6/magClust.RData")
+        
+        output$configurator<-renderUI({tagList(selectInput(inputId="SHhit",label="CDA/VLR hit:",choices=c("All",unique(as.character(magClust$CDA.VLR.hit)))),
+                                               selectInput(inputId="mod",label="Module:",choices=c("All",unique(as.character(magClust$module))))) })
+        
+        output$magclust<-renderDT({
+          data <- magClust  
+        if (input$SHhit != "All") {
+          data <- data[data$CDA.VLR.hit == input$SHhit,]
+        }
+        if (input$mod != "All") {
+          data <- data[data$module == input$mod,]
+        }
+          data},options = list(autoWidth = TRUE,scrollX=TRUE), filter = "bottom")
 
         observeEvent(input$selectgenes, {
             inGenesL<-isolate(input$geneid)
@@ -135,16 +150,26 @@ server <- function(input, output, session) {
                                                                   ) 
                                                               )
                                                           ),
+                                                
+                                                tabPanel(title="Annotation.Table",
+                                                         fluidRow(
+                                                           uiOutput("configurator")
+                                                           ),
+                                                         #fluidPage(
+                                                         DTOutput("magclust"),
+                                                         actionButton(inputId="selGenesFromTab",label="Select Gene IDs from table")
+                                                         #)
+                                                ),
                                                    tabPanel(title="Tsne.Map",
                                                       fluidPage(
-                                                          box(plotOutput("tsneAgg")),
+                                                          box(plotOutput("tsneAgg"),width=4),
                                                           box(title = "Plot controls",selectInput("tsnelog", "Log scale",choices=c("TRUE","FALSE"),selected="TRUE")),
                                                           box(title="Method Description",renderText("(Log) counts were aggregated over selected genes and the expression levels were colour-coded on the tsne map."))
                                                                 )
                                                               ),
                                                    tabPanel(title="Top.Correl.Genes",
                                                       fluidPage(
-                                                          box(plotOutput("corlog2")),
+                                                          box(plotOutput("corlog2"),width=4),
                                                           box(tableOutput("top10cor")),
                                                           box(title="Method Description",renderText("Pearson correlation was calculated between log2-transformed aggregated counts for gene selection and all log2-transformed genes in the ndata slot of the sc object. Top 10 genes are listed."))
                                                                )
