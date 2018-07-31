@@ -13,7 +13,7 @@ ui <- function(request) {dashboardPage(
     dashboardSidebar(
 
         textInput(inputId="group", label="Group", value = "", width = NULL, placeholder = NULL),
-        selectInput(inputId="projectid", label="ProjectID", choices=c("SELECT A PROJECT","Trancoso512A_B_C","Trancoso512D_E_F")),
+        selectInput(inputId="projectid", label="ProjectID", choices=c("SELECT A PROJECT","Trancoso512A_B_C","")),
         actionButton("submitinput", "Retrieve dataset"),
         textInput(inputId="geneid", label="GeneID", value="",placeholder="TYPE IN GENE ID"),
         actionButton("selectgenes", "Select genes"),
