@@ -202,9 +202,8 @@ server <- function(input, output, session) {
             inpwselY<-unlist(strsplit(inpwselYL,split=";"))
             plotdat<-as.data.frame(cbind(colSums(ndata[rownames(ndata) %in% inpwselX,]),colSums(ndata[rownames(ndata) %in% inpwselY,])),stringsAsFactors=FALSE)
             colnames(plotdat)<-c("X","Y")
-            corv<-round(cor(x=log2(plotdat$X+0.1),y=log2(plotdat$Y+0.1)),digits=2)
             pt<-isolate(input$pwcortit)
-            output$pwplot<-renderPlot({ggplot(data=plotdat)+geom_point(aes(x=X,y=Y))+ggtitle(paste(pt,"cor=",corv,sep=" "))})
+            output$pwplot<-renderPlot({ggplot(data=plotdat)+geom_point(aes(x=X,y=Y))})
 
        },ignoreInit=TRUE)#end of observe input$plotpwcor 
 
