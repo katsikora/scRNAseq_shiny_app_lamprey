@@ -48,7 +48,12 @@ server <- function(input, output, session) {
     output$sessionInfo <- renderPrint({capture.output(sessionInfo())})
 
     dbFile<-read.table("/data/manke/group/shiny/sikora/aux_files/scRNAseq.DB.csv",header=TRUE,sep="\t",quote="",as.is=TRUE)
-
+    
+    values<-reactiveValues()
+    values$rowsSel<-""
+    values$cList<-""
+    values$inGenes=""
+    
 
 ################################
     ##load input data, show head of ndata
@@ -63,35 +68,90 @@ server <- function(input, output, session) {
         #sc<-readRDS("/data/manke/group/shiny/sikora/aux_files/sc.minT5000.rds")
         #sc<-readRDS("/data/boehm/sikora/sikora/scRNAseq.lamprey/171201ALL.Lp.Trinity.good.OLD.NEW.cVLR.RaceID.monocle.rBE.CGenes.RPLS.FGenes.cellCycle.workspaceR/sc.minT5000.RDS")
         if(grepl("rds$",datPath,ignore.case=TRUE)){
-            sc<-readRDS(datPath)}
+            values$sc<-readRDS(datPath)}
         else if (grepl("rdata$",datPath,ignore.case=TRUE)){
            myEnv<-environment()
            sctmp<-load(datPath, envir = myEnv)
-           sc <- myEnv[[sctmp]]
+           values$sc <- myEnv[[sctmp]]
             }
         #render the head
-        ndata<-as.data.frame(as.matrix(sc@ndata)*5000,stringsAsFactors=FALSE)
+        values$ndata<-as.data.frame(as.matrix(sc@ndata)*5000,stringsAsFactors=FALSE)
+        ndata<-values$ndata
         output$datHead<-renderTable({ndata[1:10,1:min(8,ncol(ndata))]},caption="Normalized data",caption.placement = getOption("xtable.caption.placement", "top"),include.rownames=TRUE)
         load("/data/boehm/sikora/trancoso/512/180723ALL.Lp.Trinity.good.OLD.NEW.cVLR_CDA1x2.RaceID3NEW.NOrBE.CGenes.RPLS.FGenes.cellCycle.workspaceR/WGCNA.p6/magClust.RData")
+        
+        values$dat <- magClust
+        
         
         output$configurator<-renderUI({tagList(selectInput(inputId="SHhit",label="CDA/VLR hit:",choices=c("All",unique(as.character(magClust$CDA.VLR.hit)))),
                                                selectInput(inputId="mod",label="Module:",choices=c("All",unique(as.character(magClust$module))))) })
         
+        
         output$magclust<-renderDT({
-          data <- magClust  
+            
+          dat<-values$dat
+
         if (input$SHhit != "All") {
-          data <- data[data$CDA.VLR.hit == input$SHhit,]
+          dat <- dat[dat$CDA.VLR.hit == input$SHhit,]
         }
         if (input$mod != "All") {
-          data <- data[data$module == input$mod,]
+          dat <- dat[dat$module == input$mod,]
         }
-          data},options = list(autoWidth = TRUE,scrollX=TRUE), filter = "bottom")
+         
+          values$dat2<-dat
+          dat},options = list(autoWidth = TRUE,scrollX=TRUE), filter = "bottom")
+        
+       },ignoreInit=TRUE)#end of observe input$submitinput   
+    
+    
+        misc<-observe(values$rowsSel<-input$magclust_rows_selected)
+        #output$debug2<-renderText({paste0(values$rowsSel,collapse=" ")})
+#
+               observeEvent(input$selectgenes,{
+          inGenesL<-isolate(input$geneid)
+          if(inGenesL!=""){
+             inGenes<-unique(unlist(strsplit(inGenesL,split=";")))}
+          values$inGenes<-inGenes
+          output$genesSel<-renderText({paste0("Selected genes: ",paste0(inGenes,collapse=" "))})
+          output$genesSel2<-renderText({paste0("Selected genes: ",paste0(inGenes,collapse=" "))})
+          ndata<-isolate(values$ndata)
+          
+          nv<-inGenes[inGenes %in% rownames(ndata)]
+          output$genesExpr<-renderText({paste0("Expressed genes: ",paste0(nv,collapse=" "))})
+          output$genesExpr2<-renderText({paste0("Expressed genes: ",paste0(nv,collapse=" "))})
+          
+          
+        },ignoreInit=TRUE)
+        
+        
+        observeEvent(input$selGenesFromTab,{
+              dat2<-values$dat2
+          
+          #        if(values$rowsSel !=""){
+          #          dat2<-dat2[values$rowsSel,]}
+                inGenes<-unique(dat2$GeneSym)
+                values$inGenes<-inGenes
+                output$genesSel<-renderText({paste0("Selected genes: ",paste0(inGenes,collapse=" "))})
+                output$genesSel2<-renderText({paste0("Selected genes: ",paste0(inGenes,collapse=" "))})
+                ndata<-isolate(values$ndata)
+                
+                nv<-inGenes[inGenes %in% rownames(ndata)]
+                output$genesExpr<-renderText({paste0("Expressed genes: ",paste0(nv,collapse=" "))})
+                output$genesExpr2<-renderText({paste0("Expressed genes: ",paste0(nv,collapse=" "))})
+                
+        },ignoreInit=TRUE)#end of observe input$selectgenesfromtab
+            
+       
+       observeEvent(input$plottsne,{
+         
+            inGenes<-isolate(values$inGenes)
+            
+            sc<-isolate(values$sc)
+            ndata<-isolate(values$ndata)
 
-        observeEvent(input$selectgenes, {
-            inGenesL<-isolate(input$geneid)
-            inGenes<-unlist(strsplit(inGenesL,split=";"))
-            output$ingenes<-renderText(inGenes)
             nv<-inGenes[inGenes %in% rownames(ndata)]
+          
+        
             if(length(nv)>0){
                 ifelse(length(nv)==1,nt<-nv,nt<-"Selected genes")
             output$tsneAgg<-renderPlot({plotexpmap(sc,nv,n=nt,logsc=as.logical(input$tsnelog))})
@@ -106,8 +166,8 @@ server <- function(input, output, session) {
             output$top10cor<-renderTable({head(cor.log2T[,"cor",drop=FALSE],n=10)},caption="Top 10 correlated genes",caption.placement = getOption("xtable.caption.placement", "top"),include.rownames=TRUE)
  
 
-
-        },ignoreInit=TRUE)#end of observe input$selectgenes
+       },ignoreInit=TRUE)#end of observe plottsne
+        
 
         observeEvent(input$plotpwcor,{
             if((input$pwselX!="")&(input$pwselY!="")){
@@ -121,7 +181,7 @@ server <- function(input, output, session) {
 
        },ignoreInit=TRUE)#end of observe input$plotpwcor 
 
-    },ignoreInit=TRUE)#end of observe input$submitinput
+   
 
 
 ############################
@@ -153,25 +213,31 @@ server <- function(input, output, session) {
                                                 
                                                 tabPanel(title="Annotation.Table",
                                                          fluidRow(
-                                                           uiOutput("configurator")
+                                                           column(4,uiOutput("configurator")),
+                                                           column(8,box(textInput("contigList","Contig list",value="All",placeholder="Lp242_Blood_Lymphocyte_DN70593_c3_g1_i8;Lp242_Kidney_Lymphocyte_DN91736_c3_g3_i10"),width=8)),
+                                                           actionButton(inputId="selGenesByContig",label="Select Gene IDs matching contig names")
                                                            ),
                                                          #fluidPage(
                                                          DTOutput("magclust"),
-                                                         actionButton(inputId="selGenesFromTab",label="Select Gene IDs from table")
+                                                         actionButton(inputId="selGenesFromTab",label="Select Gene IDs from table"),
+                                                         box(textOutput("debug2"))
                                                          #)
                                                 ),
                                                    tabPanel(title="Tsne.Map",
                                                       fluidPage(
                                                           box(plotOutput("tsneAgg"),width=4),
                                                           box(title = "Plot controls",selectInput("tsnelog", "Log scale",choices=c("TRUE","FALSE"),selected="TRUE")),
-                                                          box(title="Method Description",renderText("(Log) counts were aggregated over selected genes and the expression levels were colour-coded on the tsne map."))
+                                                          box(title="Method Description",renderText("(Log) counts were aggregated over selected genes and the expression levels were colour-coded on the tsne map.")),
+                                                          box(title="Genes used",textOutput("genesSel"),textOutput("genesExpr")),
+                                                          actionButton(inputId="plottsne",label="Plot tsne map")
                                                                 )
                                                               ),
                                                    tabPanel(title="Top.Correl.Genes",
                                                       fluidPage(
                                                           box(plotOutput("corlog2"),width=4),
                                                           box(tableOutput("top10cor")),
-                                                          box(title="Method Description",renderText("Pearson correlation was calculated between log2-transformed aggregated counts for gene selection and all log2-transformed genes in the ndata slot of the sc object. Top 10 genes are listed."))
+                                                          box(title="Method Description",renderText("Pearson correlation was calculated between log2-transformed aggregated counts for gene selection and all log2-transformed genes in the ndata slot of the sc object. Top 10 genes are listed.")),
+                                                          box(title="Genes used",textOutput("genesSel2"),textOutput("genesExpr2"))
                                                                )
                                                           ),
                                                   tabPanel(title="Pairwise.Expression",
