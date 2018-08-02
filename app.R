@@ -73,7 +73,10 @@ server <- function(input, output, session) {
            myEnv<-environment()
            sctmp<-load(datPath, envir = myEnv)
            values$sc <- myEnv[[sctmp]]
-            }
+        }
+      
+        load(dbFile$PathToSampleSheet[(dbFile$Group %in% inGroup) & (dbFile$ProjectID %in% inProjectID)])
+        values$sampleInfo<-sampleInfo
         #render the head
         values$ndata<-as.data.frame(as.matrix(sc@ndata)*5000,stringsAsFactors=FALSE)
         ndata<-values$ndata
@@ -190,7 +193,8 @@ server <- function(input, output, session) {
  
 
        },ignoreInit=TRUE)#end of observe plottsne
-        
+       
+       
 
         observeEvent(input$plotpwcor,{
             sc<-isolate(values$sc)
@@ -202,6 +206,9 @@ server <- function(input, output, session) {
             inpwselY<-unlist(strsplit(inpwselYL,split=";"))
             plotdat<-as.data.frame(cbind(colSums(ndata[rownames(ndata) %in% inpwselX,]),colSums(ndata[rownames(ndata) %in% inpwselY,])),stringsAsFactors=FALSE)
             colnames(plotdat)<-c("X","Y")
+            sampleInfo<-values$sampleInfo
+            if(input$VLRgroup!="All"){
+               plotdat<-plotdat[rownames(plotdat) %in% sampleInfo$SampleID[sampleInfo$VLR %in% input$VLRgroup],]}
             corv<-round(cor(x=log2(plotdat$X+0.1),y=log2(plotdat$Y+0.1)),digits=2)
             pt<-isolate(input$pwcortit)
             output$pwplot<-renderPlot({ggplot(data=plotdat)+geom_point(aes(x=X,y=Y))+ggtitle(paste(pt,"cor=",corv,sep=" "))})
@@ -272,6 +279,7 @@ server <- function(input, output, session) {
                                                           box(title = "Select gene(s) X",textInput(inputId="pwselX", label="Gene symbol(s) for X axis",value="")),
                                                           box(title = "Select gene(s) Y",textInput(inputId="pwselY", label="Gene symbol(s) for Y axis",value="")),
                                                           box(textInput("pwcortit","Plot title",value="Selected genes",placeholder="TYPE IN PLOT TITLE")),
+                                                          box(title = "Select VLR group",selectInput("VLRgroup", "VLR group",choices=c("All","VLRA","VLRB","VLRC","VLRAC","VLRBC","VLRAB","TN"),selected="All")),
                                                           actionButton(inputId="plotpwcor",label="Plot expression"),
                                                           box(title="Method Description",renderText("Pairwise plot of normalized counts."))
                                                           
