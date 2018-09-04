@@ -1,5 +1,5 @@
 ## app.R ##
-Rlib="/data/boehm/group/shiny_apps/Rlibs3.4.0"
+Rlib="/data/boehm/group/shiny_apps/Rlibs3.5.0"
 library(shiny,lib.loc=Rlib)
 library(shinydashboard,lib.loc=Rlib)
 library(rhandsontable,lib.loc=Rlib)
@@ -53,7 +53,7 @@ server <- function(input, output, session) {
     values$rowsSel<-""
     values$cList<-"All"
     values$inGenes=""
-    
+
 
 ################################
     ##load input data, show head of ndata
@@ -81,33 +81,33 @@ server <- function(input, output, session) {
         values$ndata<-as.data.frame(as.matrix(sc@ndata)*5000,stringsAsFactors=FALSE)
         ndata<-values$ndata
         output$datHead<-renderTable({ndata[1:10,1:min(8,ncol(ndata))]},caption="Normalized data",caption.placement = getOption("xtable.caption.placement", "top"),include.rownames=TRUE)
-        load("/data/boehm/sikora/trancoso/512/180723ALL.Lp.Trinity.good.OLD.NEW.cVLR_CDA1x2.RaceID3NEW.NOrBE.CGenes.RPLS.FGenes.cellCycle.workspaceR/WGCNA.p6/magClust.RData")
+	     load(dbFile$PathToAnnot[(dbFile$Group %in% inGroup) & (dbFile$ProjectID %in% inProjectID)])
         
         values$dat <- magClust
         
-        
+     
         output$configurator<-renderUI({tagList(selectInput(inputId="SHhit",label="CDA/VLR hit:",choices=c("All",unique(as.character(magClust$CDA.VLR.hit)))),
-                                               selectInput(inputId="mod",label="Module:",choices=c("All",unique(as.character(magClust$module))))) })
-        
-        
+                                                 selectInput(inputId="mod",label="Module:",choices=c("All",unique(as.character(magClust$module))))) })  
         output$magclust<-renderDT({
             
           dat<-values$dat
 
-        if (input$SHhit != "All") {
-          dat <- dat[dat$CDA.VLR.hit == input$SHhit,]
+        if (!input$SHhit %in% "All" & !is.na(input$SHhit)) {
+          dat <- dat[dat$CDA.VLR.hit %in% input$SHhit,]
         }
-        if (input$mod != "All") {
-          dat <- dat[dat$module == input$mod,]
+        if (!input$mod %in% "All"& !is.na(input$mod)) {
+          dat <- dat[dat$module %in% input$mod,]
         }
          
           values$dat2<-dat
-          dat},server=TRUE,options = list(autoWidth = TRUE,scrollX=TRUE), filter = "bottom")
+          dat},server=TRUE,options = list(autoWidth = TRUE,scrollX=TRUE), filter = "bottom")#end of renderDT
+        
         
        },ignoreInit=TRUE)#end of observe input$submitinput   
     
     
-        misc<-observe(values$rowsSel<-input$magclust_rows_selected)
+        misc<-observe({req(input$magclust_rows_selected)
+                      values$rowsSel<-input$magclust_rows_selected})
         #output$debug2<-renderText({paste0(values$rowsSel,collapse=" ")})
                 
         
@@ -132,7 +132,7 @@ server <- function(input, output, session) {
         observeEvent(input$selGenesFromTab,{
               dat2<-values$dat2
           
-                  if(values$rowsSel !=""){
+                  if(!values$rowsSel %in% ""){
                     dat2<-dat2[values$rowsSel,]}
                 inGenes<-unique(dat2$GeneSym)
                 values$inGenes<-inGenes
