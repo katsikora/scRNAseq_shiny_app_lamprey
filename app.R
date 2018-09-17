@@ -264,7 +264,7 @@ server <- function(input, output, session) {
                                                           box(plotOutput("tsneAgg"),width=4),
                                                           box(title = "Plot controls",selectInput("tsnelog", "Log scale",choices=c("TRUE","FALSE"),selected="TRUE"),textInput("tsnetit","Plot title",value="Selected genes",placeholder="TYPE IN PLOT TITLE")),
                                                           box(title="Method Description",renderText("(Log) counts were aggregated over selected genes and the expression levels were colour-coded on the tsne map.")),
-                                                          box(title="Genes used",textOutput("genesSel"),textOutput("genesExpr"),textOutput("genesPlot")),
+                                                          box(title="Genes used",textOutput("genesSel"),textOutput("genesExpr")),
                                                           actionButton(inputId="plottsne",label="Plot tsne map")
                                                                 )
                                                               ),
@@ -273,7 +273,7 @@ server <- function(input, output, session) {
                                                           box(plotOutput("corlog2"),width=4),
                                                           box(tableOutput("top10cor")),
                                                           box(title="Method Description",renderText("Pearson correlation was calculated between log2-transformed aggregated counts for gene selection and all log2-transformed genes in the ndata slot of the sc object. Top 10 genes are listed.")),
-                                                          box(title="Genes used",textOutput("genesSel2"),textOutput("genesExpr2"),textOutput("genesPlot2"))
+                                                          box(title="Genes used",textOutput("genesSel2"),textOutput("genesExpr2"))
                                                                )
                                                           ),
                                                   tabPanel(title="Pairwise.Expression",
