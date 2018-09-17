@@ -78,7 +78,8 @@ server <- function(input, output, session) {
         load(dbFile$PathToSampleSheet[(dbFile$Group %in% inGroup) & (dbFile$ProjectID %in% inProjectID)])
         values$sampleInfo<-sampleInfo
         #render the head
-        values$ndata<-as.data.frame(as.matrix(sc@ndata)*5000,stringsAsFactors=FALSE)
+        ntemp<-as.data.frame(as.matrix(sc@ndata)*5000,stringsAsFactors=FALSE)
+        values$ndata<-ntemp[rowSums(ntemp)>0,]
         ndata<-values$ndata
         output$datHead<-renderTable({ndata[1:10,1:min(8,ncol(ndata))]},caption="Normalized data",caption.placement = getOption("xtable.caption.placement", "top"),include.rownames=TRUE)
 	     load(dbFile$PathToAnnot[(dbFile$Group %in% inGroup) & (dbFile$ProjectID %in% inProjectID)])
@@ -163,6 +164,9 @@ server <- function(input, output, session) {
           output$genesExpr2<-renderText({paste0("Expressed genes: ",paste0(nv,collapse=" "))})
           
           
+          
+          
+          
         },ignoreInit=TRUE)
             
        
@@ -174,8 +178,7 @@ server <- function(input, output, session) {
             ndata<-isolate(values$ndata)
 
             nv<-inGenes[inGenes %in% rownames(ndata)]
-          
-        
+            
             if(length(nv)>0){
                 nt<-isolate(input$tsnetit)
                 #ifelse(length(nv)==1,nt<-nv,nt<-"Selected genes")
@@ -183,7 +186,7 @@ server <- function(input, output, session) {
             
             }#fi
             ###produce top correlated genes for aggregated selected gene(s)
-            cor.log2<-cor(x=log2(colSums(ndata[rownames(ndata) %in% inGenes,])+0.1),y=t(log2(ndata+0.1))) 
+            cor.log2<-cor(x=log2(colSums(ndata[rownames(ndata) %in% nv,])+0.1),y=t(log2(ndata+0.1))) 
             output$corlog2<-renderPlot({boxplot(t(cor.log2))})
             cor.log2T<-as.data.frame(t(cor.log2),stringsAsFactors=FALSE)
             colnames(cor.log2T)<-"cor"
@@ -261,7 +264,7 @@ server <- function(input, output, session) {
                                                           box(plotOutput("tsneAgg"),width=4),
                                                           box(title = "Plot controls",selectInput("tsnelog", "Log scale",choices=c("TRUE","FALSE"),selected="TRUE"),textInput("tsnetit","Plot title",value="Selected genes",placeholder="TYPE IN PLOT TITLE")),
                                                           box(title="Method Description",renderText("(Log) counts were aggregated over selected genes and the expression levels were colour-coded on the tsne map.")),
-                                                          box(title="Genes used",textOutput("genesSel"),textOutput("genesExpr")),
+                                                          box(title="Genes used",textOutput("genesSel"),textOutput("genesExpr"),textOutput("genesPlot")),
                                                           actionButton(inputId="plottsne",label="Plot tsne map")
                                                                 )
                                                               ),
@@ -270,7 +273,7 @@ server <- function(input, output, session) {
                                                           box(plotOutput("corlog2"),width=4),
                                                           box(tableOutput("top10cor")),
                                                           box(title="Method Description",renderText("Pearson correlation was calculated between log2-transformed aggregated counts for gene selection and all log2-transformed genes in the ndata slot of the sc object. Top 10 genes are listed.")),
-                                                          box(title="Genes used",textOutput("genesSel2"),textOutput("genesExpr2"))
+                                                          box(title="Genes used",textOutput("genesSel2"),textOutput("genesExpr2"),textOutput("genesPlot2"))
                                                                )
                                                           ),
                                                   tabPanel(title="Pairwise.Expression",
